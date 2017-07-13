@@ -161,12 +161,12 @@ static void handle_connection(int fd)
 		while (count >= 7) {
 			command = p[0];
 			total_len = (p[1] << 8) | p[2];
-			len = (p[4] << 8) | p[5];
-			addr = (p[6] << 8) | p[7];
+			len = (p[OFFSET+4] << 8) | p[OFFSET+5];
+			addr = (p[OFFSET+6] << 8) | p[OFFSET+7];
 
 			if (command == COMMAND_READ) {
-				p += 8;
-				count -= 8;
+				p += OFFSET+8;
+				count -= OFFSET+8;
 
 				buf[0] = COMMAND_WRITE;
 				buf[1] = (0x4 + len) >> 8;
@@ -175,18 +175,18 @@ static void handle_connection(int fd)
 				write(fd, buf, 4 + len);
 			} else {
 				/* not enough data, fetch next bytes */
-				if (count < len + 8) {
-					if (buf_size < len + 8) {
-						buf_size = len + 8;
+				if (count < len + OFFSET + 8) {
+					if (buf_size < len + OFFSET + 8) {
+						buf_size = len + OFFSET + 8;
 						buf = (uint8_t *) realloc(buf, buf_size);
 						if (!buf)
 							goto exit;
 					}
 					break;
 				}
-				backend_ops->write(addr, len, p + 8);
-				p += len + 8;
-				count -= len + 8;
+				backend_ops->write(addr, len, p + OFFSET + 8);
+				p += len + OFFSET + 8;
+				count -= len + OFFSET + 8;
 			}
 		}
 	}
