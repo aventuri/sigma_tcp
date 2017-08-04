@@ -100,7 +100,7 @@ static int i2c_write(unsigned int addr, unsigned int len, const uint8_t *data)
 	return ioctl(i2c_fd, I2C_RDWR, &xfer);
 }
 
-const struct backend_ops i2c_backend_ops = {
+struct backend_ops i2c_backend_ops = {
 	.open = i2c_open,
 	.read = i2c_read,
 	.write = i2c_write,

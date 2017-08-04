@@ -76,7 +76,7 @@ static int regmap_write(unsigned int addr, unsigned int len, const uint8_t *data
 	return 1;
 }
 
-const struct backend_ops regmap_backend_ops = {
+struct backend_ops regmap_backend_ops = {
 	.open = regmap_open,
 	.read = regmap_read,
 	.write = regmap_write,
