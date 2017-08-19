@@ -2,7 +2,13 @@
 # BASEDIR=/home/buildroot/buildroot_outputs/host
 
 # /home/buildroot/src/buildroot/buildroot-2015.02/output/host/usr/bin/arm-linux-gnueabihf-gcc
-BASEDIR=/home/buildroot/src/buildroot/buildroot-2015.02/output/host
+#
+# distrobox
+#BASEDIR=/home/buildroot/src/buildroot/buildroot-2015.02/output/host
+
+# andrea desktop cherrytrai
+BASEDIR=/home/andrea/src/buildroot-2017.02/output/host
+
 CC=$(BASEDIR)/usr/bin/arm-linux-gnueabihf-gcc
 
 CFLAGS= -std=gnu99 -pedantic-errors -ggdb -Wall
