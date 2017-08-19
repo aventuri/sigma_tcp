@@ -21,6 +21,8 @@
  * see my page: http://localhost/w/index.php/Sigma_Studio_and_Adau1701
  */
 
+#include <stdint.h>
+
 struct adauWriteHeader_s {
 	uint8_t controlBit;
 	uint8_t safeload;

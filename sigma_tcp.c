@@ -80,9 +80,9 @@ static int show_addrs(int sck)
 	return 0;
 }
 
-#define COMMAND_WRITE 0x09
-#define COMMAND_READ 0x0a
-#define COMMAND_RESP 0x0b
+#define CMD_WRITE 0x09
+#define CMD_READ 0x0a
+#define CMD_RESP 0x0b
 
 static uint8_t debug_data[256];
 
@@ -155,25 +155,15 @@ enum STATE_ENUM { FSM_IDLE, \
 static void handle_connection(int fd)
 {
 	enum STATE_ENUM state = FSM_IDLE;
-	uint8_t *buf=NULL;
-	size_t buf_size;
-	uint8_t *p = buf;
-	uint32_t dataLen;
-	uint8_t chipAddr; // I2C addr = 7 bit.. 
-	uint16_t paramAddr; // inside the DSP, the addr of a param
-
-	uint32_t totalLen;
 	int count, ret, start;
-	char command;
 
 	count = 0;
 
 	uint8_t buf[MAX_BUF_SIZE];
-	uint8_t bufOut[MAX_BUF_SIZE];
+	uint8_t *p = buf;
 
-	struct adau_readReqHeader_s *req;
-	struct adau_readWriteHeader_s *write;
-	struct adau_readRespHeader_s *resp;
+	struct adauReqHeader_s *req;
+	struct adauWriteHeader_s *regWrite;
 
 	start=0; // index of first transaction byte
 	while (state != FSM_STOP) {
@@ -208,8 +198,8 @@ static void handle_connection(int fd)
 				}
 				break;
 			case FSM_CMD_READ:
-				if (count >= sizeof(adauReqHeader_s)) {
-					req = p;
+				if (count >= sizeof(struct adauReqHeader_s)) {
+					req = (struct adauReqHeader_s*) p;
 					// got enough info, send a read req
 					state = FSM_I2C_READ;
 					printf("read CMD: got the NET header, need to read %d byte on chip %x at param addr %d\n",
@@ -217,35 +207,49 @@ static void handle_connection(int fd)
 				}
 				break;
 			case FSM_CMD_WRITE:
-				if (count >= sizeof(adauWriteHeader_s)) {
-					write = p;
+				if (count >= sizeof(struct adauWriteHeader_s)) {
+					regWrite = (struct adauWriteHeader_s *) p;
 					// got enough info, send a read req
 					state = FSM_NET_WAITING_DATA;
 					printf("write CMD: got the NET header, need to write %d bytes on chip %x at param addr %d\n",
-							write->dataLen, write->chipAddr, write->paramAddr );
+							regWrite->dataLen, regWrite->chipAddr, regWrite->paramAddr );
 				} else
 					break;
-			case FSM_NET_WAITING_DATA;
-				if (count >= sizeof(adauWriteHeader_s) + dataLen) { // maybe just write->totalLen?
+			case FSM_NET_WAITING_DATA:
+				if (count >= sizeof(struct adauWriteHeader_s) + regWrite->dataLen) { // maybe just regWrite->totalLen?
 					state = FSM_I2C_WRITE;
 				}
 				break;
 			case FSM_I2C_WRITE:
-				printf("write to I2C addr %x, param %d, data length %d", write->chipAddr, write->paramAddr, write->dataLen);
-				backend_ops->write(write->paramAddr, write->dataLen, p + sizeof(adauWriteHeader_s));
-				p += write->totalLen;
-				count -= write->totalLen;
+				printf("write to I2C addr %x, param %d, data length %d", regWrite->chipAddr, regWrite->paramAddr, regWrite->dataLen);
+				backend_ops->write(regWrite->paramAddr, regWrite->dataLen, p + sizeof(struct adauWriteHeader_s));
+				p += regWrite->totalLen;
+				count -= regWrite->totalLen;
 				state = FSM_IDLE;
 				break;
 			case FSM_I2C_READ:
-				p += OFFSET+8;
-				count -= OFFSET+8;
+				printf("read I2C addr %x, param %d, data length %d", req->chipAddr, req->paramAddr, req->dataLen);
+				if (req->dataLen < (MAX_BUF_SIZE- sizeof(struct adauReqHeader_s))) {
+					uint8_t bufResp[MAX_BUF_SIZE];
+					struct adauRespHeader_s *resp = (struct adauRespHeader_s *) bufResp;
+					int respLen = backend_ops->read(req->paramAddr, req->dataLen, bufResp + sizeof(struct adauRespHeader_s));
+					if (respLen>0) {
+						resp->controlBit = CMD_RESP;
+						resp->totalLen = sizeof(struct adauRespHeader_s) + respLen;
+						resp->chipAddr = req->chipAddr;
+						resp->dataLen = respLen;
+						resp->paramAddr = req->paramAddr;
+						resp->success = (respLen == req->dataLen)?0:1 ;
+						resp->reserved1 = 0;
+						write(fd, bufResp, resp->totalLen);
+					}
+				} else {
+					printf("cant manage too large reply! %d bytes", req->dataLen);
 
-				buf[0] = COMMAND_RESP;
-				buf[1] = (0x4 + len) >> 8;
-				buf[2] = (0x4 + len) & 0xff;
-				buf[3] = backend_ops->read(addr, len, buf + 4);
-				write(fd, buf, 4 + len);
+				}
+				p += req->totalLen;
+				count -= req->totalLen;
+				state = FSM_IDLE;
 				break;
 			case FSM_ERR:
 				printf("bailing out..  no recover procedure now\n");
@@ -256,44 +260,7 @@ static void handle_connection(int fd)
 				state = FSM_STOP;
 				break;
 		}
-#if 0
-		while (count >= 7) {
-			command = p[0];
-			total_len = (p[1] << 8) | p[2];
-			len = (p[OFFSET+4] << 8) | p[OFFSET+5];
-			addr = (p[OFFSET+6] << 8) | p[OFFSET+7];
-
-			if (command == COMMAND_READ) {
-				p += OFFSET+8;
-				count -= OFFSET+8;
-
-				buf[0] = COMMAND_RESP;
-				buf[1] = (0x4 + len) >> 8;
-				buf[2] = (0x4 + len) & 0xff;
-				buf[3] = backend_ops->read(addr, len, buf + 4);
-				write(fd, buf, 4 + len);
-			} else {
-				/* not enough data, fetch next bytes */
-				if (count < len + OFFSET + 8) {
-					if (buf_size < len + OFFSET + 8) {
-						buf_size = len + OFFSET + 8;
-						buf = (uint8_t *) realloc(buf, buf_size);
-						if (!buf)
-							goto exit;
-					}
-					break;
-				}
-				printf("write to addr %x, data length %d", addr, len);
-				backend_ops->write(addr, len, p + OFFSET + 8);
-				p += len + OFFSET + 8;
-				count -= len + OFFSET + 8;
-			}
-		}
-#endif
 	}
-
-exit:
-	free(buf);
 }
 
 int main(int argc, char *argv[])
