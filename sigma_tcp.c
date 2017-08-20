@@ -74,7 +74,7 @@ static int show_addrs(int sck)
 			continue;
 
 		addr_to_str(addr, ip, INET6_ADDRSTRLEN);
-		printf("%s: %s\n", &ifr[i].ifr_name, ip);
+		printf("%s: %s\n", (char *) &ifr[i].ifr_name, ip);
 	}
 
 	return 0;
@@ -213,8 +213,10 @@ static void handle_connection(int fd)
 					state = FSM_NET_WAITING_DATA;
 					printf("write CMD: got the NET header, need to write %d bytes on chip %x at param addr %d\n",
 							regWrite->dataLen, regWrite->chipAddr, regWrite->paramAddr );
-				} else
+				} else {
+					state = FSM_NET_WAITING_DATA;
 					break;
+				}
 			case FSM_NET_WAITING_DATA:
 				if (count >= sizeof(struct adauWriteHeader_s) + regWrite->dataLen) { // maybe just regWrite->totalLen?
 					state = FSM_I2C_WRITE;
@@ -266,10 +268,10 @@ static void handle_connection(int fd)
 int main(int argc, char *argv[])
 {
     int sockfd, new_fd;
-    struct addrinfo hints, *servinfo, *p;
+    struct addrinfo *servinfo, *p;
     struct sockaddr_storage their_addr;
     socklen_t sin_size;
-    struct sigaction sa;
+    //struct sigaction sa;
     int reuse = 1;
     char s[INET6_ADDRSTRLEN];
     int ret;
@@ -277,6 +279,7 @@ int main(int argc, char *argv[])
     debug_backend_ops.open = debug_open;
     debug_backend_ops.read = debug_read;
     debug_backend_ops.write = debug_write;
+// already fn bound on structt *_ops
 #if 0
     i2c_backend_ops.open = i2c_open;
     i2c_backend_ops.read = i2c_read;
@@ -377,7 +380,7 @@ int main(int argc, char *argv[])
         exit(1);
     }
 
-    printf("Waiting for connections...\n");
+    printf("Waiting for connections on port %d...\n", portno);
 	show_addrs(sockfd);
 
     fd_set readfds;
