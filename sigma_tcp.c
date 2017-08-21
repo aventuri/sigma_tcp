@@ -144,45 +144,66 @@ static void *get_in_addr(struct sockaddr *sa)
 }
 
 enum STATE_ENUM { FSM_IDLE, \
+	FSM_GOTCHAR, \
 	FSM_CMD_READ, FSM_CMD_WRITE, \
 	FSM_NET_WAITING_DATA, \
 	FSM_I2C_WRITE, FSM_I2C_READ, \
 	FSM_NET_RESP, \
+	FSM_FLUSH, \
 	FSM_STOP, FSM_ERR };
 
-#define MAX_BUF_SIZE 512
+#define MAX_BUF_SIZE 2048
+
+uint16_t u8to16( uint8_t *u8)
+{
+	return (*u8<<8) | *(u8+1);
+}
+
+uint32_t u8to32( uint8_t *u8)
+{
+	return (u8to16(u8) << 16) | u8to16(u8+2);
+}
+
+void u16to8( uint8_t *u8, uint16_t u16)
+{
+	u8[0] = (u16>>8) & 0xff;
+	u8[1] = (u16>>0) & 0xff;
+}
+
+void u32to8( uint8_t *u8, uint32_t u32)
+{
+	u8[0] = (u32>>24) & 0xff;
+	u8[1] = (u32>>16) & 0xff;
+	u8[2] = (u32>>8) & 0xff;
+	u8[3] = (u32>>0) & 0xff;
+}
 
 static void handle_connection(int fd)
 {
 	enum STATE_ENUM state = FSM_IDLE;
-	int count, ret, start;
-
-	count = 0;
+	int count=0, ret, dispose=0;
 
 	uint8_t buf[MAX_BUF_SIZE];
 	uint8_t *p = buf;
+	//uint16_t paramPrev = 0; // sometime the paramAddr is 0, that could mean, "use previous one", for large writes
 
-	struct adauReqHeader_s *req;
-	struct adauWriteHeader_s *regWrite;
+	struct adauReqHeader_s *req = (struct adauReqHeader_s*) buf;
+	struct adauWriteHeader_s *regWrite = (struct adauWriteHeader_s *) buf;
 
-	start=0; // index of first transaction byte
 	while (state != FSM_STOP) {
-		memmove(buf, p, count);
-		p = buf + count;
-
-		if (state == FSM_IDLE || state == FSM_NET_WAITING_DATA) {
-			ret = read(fd, p, MAX_BUF_SIZE - count);
-			if (ret <= 0)
-				break;
-
-			p = buf;
-			count += ret;
-		}
-
 		switch (state) {
 			case FSM_IDLE:
+				ret = read(fd, p, MAX_BUF_SIZE - count);
+				if (ret <= 0)
+					break;
+				else {
+					count += ret;
+					state = FSM_GOTCHAR;
+				}
+				break;
+			case FSM_GOTCHAR:
 				if (count > 0) {
-					switch(*p) {
+					switch(buf[0]) {
 						case CMD_READ:
 							printf("start a read transaction\n");
 							state = FSM_CMD_READ;
@@ -192,73 +213,132 @@ static void handle_connection(int fd)
 							state = FSM_CMD_WRITE;
 							break;
 						default:
-							printf("command %x not managed for packet\n", buf[start]);
+							printf("command %x not managed for packet\n", buf[0]);
 							state = FSM_ERR;
 					}
 				}
 				break;
 			case FSM_CMD_READ:
 				if (count >= sizeof(struct adauReqHeader_s)) {
-					req = (struct adauReqHeader_s*) p;
 					// got enough info, send a read req
 					state = FSM_I2C_READ;
-					printf("read CMD: got the NET header, need to read %d byte on chip %x at param addr %d\n",
-							req->dataLen, req->chipAddr, req->paramAddr );
-				}
+					printf("read CMD: got the NET header, need to read %d byte on chip %x at param addr %d\n(0x%04x)\n",
+							u8to32(req->dataLen), req->chipAddr,
+							u8to16(req->paramAddr), u8to16(req->paramAddr) );
+					if (u8to32(req->totalLen) != sizeof(struct adauReqHeader_s)) {
+						printf("read CMD: totalLen is %d when req header shoulb be %d; forcing!!\n",
+							u8to32(req->totalLen), sizeof(struct adauReqHeader_s) );
+						u32to8(req->totalLen, sizeof(struct adauReqHeader_s));
+					}
+				} else
+					state = FSM_IDLE; // WAIT FOR MORE DATA..
 				break;
 			case FSM_CMD_WRITE:
 				if (count >= sizeof(struct adauWriteHeader_s)) {
-					regWrite = (struct adauWriteHeader_s *) p;
 					// got enough info, send a read req
 					state = FSM_NET_WAITING_DATA;
-					printf("write CMD: got the NET header, need to write %d bytes on chip %x at param addr %d\n",
-							regWrite->dataLen, regWrite->chipAddr, regWrite->paramAddr );
-				} else {
-					state = FSM_NET_WAITING_DATA;
-					break;
-				}
+#if 0
+					if (u8to16(regWrite->paramAddr)) {
+						paramPrev = u8to16(regWrite->paramAddr);
+					} else {
+						if (paramPrev) {
+							u16to8(regWrite->paramAddr, paramPrev); 
+						} else {
+							printf("write CMD: ERR.. param address is empty and do not have a prev value..\n");
+						}
+					}
+#endif
+					printf("write CMD: got the NET header, need to write %d bytes on chip %x at param addr %d(0x%04x)\n",
+							u8to32(regWrite->dataLen), regWrite->chipAddr,
+							u8to16(regWrite->paramAddr), u8to16(regWrite->paramAddr) );
+				} else
+					state = FSM_IDLE;
+				break;
 			case FSM_NET_WAITING_DATA:
-				if (count >= sizeof(struct adauWriteHeader_s) + regWrite->dataLen) { // maybe just regWrite->totalLen?
+				if (count >= sizeof(struct adauWriteHeader_s) + u8to32(regWrite->dataLen)) { // maybe just regWrite->totalLen?
 					state = FSM_I2C_WRITE;
-				}
+				} else
+					state = FSM_IDLE;
 				break;
 			case FSM_I2C_WRITE:
-				printf("write to I2C addr %x, param %d, data length %d", regWrite->chipAddr, regWrite->paramAddr, regWrite->dataLen);
-				backend_ops->write(regWrite->paramAddr, regWrite->dataLen, p + sizeof(struct adauWriteHeader_s));
-				p += regWrite->totalLen;
-				count -= regWrite->totalLen;
-				state = FSM_IDLE;
+				switch(u8to32(regWrite->dataLen)) {
+				case 2:
+					printf("write to I2C addr %x, param %d (0x%04x), data 0x%04x\n",
+						regWrite->chipAddr, u8to16(regWrite->paramAddr),
+						u8to16(regWrite->paramAddr), u8to16(&buf[sizeof(struct adauWriteHeader_s)]));
+				break;
+				case 4:
+					printf("write to I2C addr %x, param %d (0x%04x), data 0x%08x\n",
+						regWrite->chipAddr, u8to16(regWrite->paramAddr),
+						u8to16(regWrite->paramAddr), u8to32(&buf[sizeof(struct adauWriteHeader_s)]));
+				break;
+				default:
+					printf("write to I2C addr %x, param %d (0x%04x), huge data length: %d\n",
+						regWrite->chipAddr, u8to16(regWrite->paramAddr),
+						u8to16(regWrite->paramAddr),u8to32(regWrite->dataLen) );
+				}
+
+				backend_ops->write(u8to16(regWrite->paramAddr), u8to32(regWrite->dataLen), buf + sizeof(struct adauWriteHeader_s));
+				if ( u8to32(regWrite->dataLen) + sizeof(struct adauWriteHeader_s) == u8to32(regWrite->totalLen) )
+					dispose = u8to32(regWrite->totalLen);
+				else
+					printf( "write req: length not matching: %d - %d\n",
+						u8to32(regWrite->dataLen) + sizeof(struct adauWriteHeader_s),
+						u8to32(regWrite->totalLen) );
+				state = FSM_FLUSH;
 				break;
 			case FSM_I2C_READ:
-				printf("read I2C addr %x, param %d, data length %d", req->chipAddr, req->paramAddr, req->dataLen);
-				if (req->dataLen < (MAX_BUF_SIZE- sizeof(struct adauReqHeader_s))) {
+				printf("read I2C addr %x, param %d (0x%04x), data length %d\n", req->chipAddr, u8to16(req->paramAddr),
+						u8to16(req->paramAddr), u8to32(req->dataLen));
+				if (u8to32(req->dataLen) < (MAX_BUF_SIZE- sizeof(struct adauRespHeader_s))) {
 					uint8_t bufResp[MAX_BUF_SIZE];
 					struct adauRespHeader_s *resp = (struct adauRespHeader_s *) bufResp;
-					int respLen = backend_ops->read(req->paramAddr, req->dataLen, bufResp + sizeof(struct adauRespHeader_s));
-					if (respLen>0) {
-						resp->controlBit = CMD_RESP;
-						resp->totalLen = sizeof(struct adauRespHeader_s) + respLen;
-						resp->chipAddr = req->chipAddr;
-						resp->dataLen = respLen;
-						resp->paramAddr = req->paramAddr;
-						resp->success = (respLen == req->dataLen)?0:1 ;
-						resp->reserved1 = 0;
-						write(fd, bufResp, resp->totalLen);
+					int respLen = backend_ops->read(u8to16(req->paramAddr), u8to32(req->dataLen), bufResp + sizeof(struct adauRespHeader_s));
+					switch(u8to32(req->dataLen)) {
+					case 2:
+						printf("returned value: 0x%04x\n", u8to16(bufResp + sizeof(struct adauRespHeader_s)));
+						break;
+					case 4:
+						printf("returned value: 0x%08x\n", u8to32(bufResp + sizeof(struct adauRespHeader_s)));
+						break;
+					default:
+						printf("returned value lonf %d bytes\n",u8to32(req->dataLen) );
 					}
+					resp->controlBit = CMD_RESP;
+					u32to8( resp->totalLen, sizeof(struct adauRespHeader_s) + u8to32(req->dataLen));
+					resp->chipAddr = req->chipAddr;
+					u32to8(resp->dataLen, u8to32(req->dataLen) );
+					resp->paramAddr[0] = req->paramAddr[0];
+					resp->paramAddr[1] = req->paramAddr[1];
+					resp->success = (respLen < 0)?1:0 ;
+					resp->reserved[0] = 0;
+					write(fd, bufResp, u8to32(resp->totalLen));
 				} else {
-					printf("cant manage too large reply! %d bytes", req->dataLen);
+					printf("cant manage too large reply! %d bytes", u8to32(req->dataLen));
 
 				}
-				p += req->totalLen;
-				count -= req->totalLen;
-				state = FSM_IDLE;
+				if ( sizeof(struct adauReqHeader_s) == u8to32(req->totalLen) )
+					dispose = u8to32(req->totalLen);
+				else
+					printf( "read req: disposable length not matching: %d - %d\n",
+						sizeof(struct adauWriteHeader_s),
+						u8to32(req->totalLen) );
+				state = FSM_FLUSH;
+				break;
+			case FSM_FLUSH:
+				count -= dispose;
+				// move the eventual new packet at the head of the buffer
+				memmove(buf, buf+dispose, count);
+				p = buf + count;
+
+				state = (count>0)?FSM_GOTCHAR:FSM_IDLE;
 				break;
 			case FSM_ERR:
 				printf("bailing out..  no recover procedure now\n");
 				state = FSM_STOP;
 				break;
 			default:
-				printf("unamanged state %d..  no recover procedure now\n", state);
+				printf("unmanaged state %d..  no recover procedure now\n", state);
 				state = FSM_STOP;
 				break;
 		}

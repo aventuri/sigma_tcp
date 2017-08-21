@@ -26,8 +26,8 @@ install:
 	install -d $(DESTDIR)/bin
 	install sigma_tcp $(DESTDIR)/bin
 
-flash:
-	scp sigma_tcp root@192.168.0.106:
+flash: sigma_tcp
+	scp sigma_tcp root@192.168.0.103:
 
 clean:
 	rm -rf sigma_tcp *.o

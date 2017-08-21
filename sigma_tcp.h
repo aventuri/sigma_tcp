@@ -27,28 +27,28 @@ struct adauWriteHeader_s {
 	uint8_t controlBit;
 	uint8_t safeload;
 	uint8_t channelNum;
-	uint32_t totalLen;
+	uint8_t totalLen[4];
 	uint8_t chipAddr;
-	uint32_t dataLen;
-	uint16_t paramAddr;
+	uint8_t dataLen[4];
+	uint8_t paramAddr[2];
 	// follow data to be received
 };
 struct adauReqHeader_s {
 	uint8_t controlBit;
-	uint32_t totalLen;
+	uint8_t totalLen[4];
 	uint8_t chipAddr;
-	uint32_t dataLen;
-	uint16_t paramAddr;
-	uint16_t reserved1;
+	uint8_t dataLen[4];
+	uint8_t paramAddr[2];
+	//uint8_t reserved[2];
 };
 struct adauRespHeader_s {
 	uint8_t controlBit;
-	uint32_t totalLen;
+	uint8_t totalLen[4];
 	uint8_t chipAddr;
-	uint32_t dataLen;
-	uint16_t paramAddr;
+	uint8_t dataLen[4];
+	uint8_t paramAddr[2];
 	uint8_t success;
-	uint8_t reserved1;
+	uint8_t reserved[1];
 	// follow data to be sent back
 };
 
