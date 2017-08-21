@@ -369,6 +369,13 @@ int main(int argc, char *argv[])
     regmap_backend_ops.write = regmap_write;
 #endif
 
+    printf("Utility for driving ADAU1452 over IP/I2C using SigmaStudio\n");
+    printf("License GPL v3 or later\n");
+    printf("Andrea Venturi <be17068@iperbole.bo.it>\n\n");
+    printf(" current development at https://github.com/aventuri/sigma_tcp\n");
+    printf(" inspired by https://wiki.analog.com/resources/tools-software/linux-software/sigmatcp\n\n");
+
+
 	if (argc >= 2) {
 		if (strcmp(argv[1], "debug") == 0)
 			backend_ops = &debug_backend_ops;
