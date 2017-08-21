@@ -10,18 +10,22 @@ this src is loosely based on sample code from:
 
 i've used __Sigma Studio 3.14.1 Build 1675__ on windows 7 toward an ADAU1452 board
 
+# video
+you can have a look at my setup and running test here:
+ https://drive.google.com/open?id=0B9QRW6Oy0Gmea2dDNmpIRjZyOVk
+ 
 # usage
 
 it's pretty simple.
 
 * clone the repo: __git clone https://github.com/aventuri/sigma_tcp.git__
 * make for cross compiling the source in a single bin **sigma_tcp**
-** eventually adjust the __BASEDIR__ var in Makefile to match your local environment
+  * eventually adjust the __BASEDIR__ var in Makefile to match your local environment
 * copy the binary in your SBC root fs
-* execute as __ ./sigma_tcp i2c /dev/i2c-1 0x3b __
-* hget to Sigma Studio, cfg the prj to lookup for IP connection
-* open connection
-* link compile download youre DSP design into the DSP
+* execute as __./sigma_tcp i2c /dev/i2c-1 0x3b__, some verbose print tells you about IP and port
+* get to Sigma Studio, cfg the prj to lookup for IP connection (with param from above)
+* open connection (the tool will spit out some messages)
+* link compile download youre DSP design into the DSP (lot's of prints on tool..)
 
 example of this invocation:
 
