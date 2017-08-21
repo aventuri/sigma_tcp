@@ -1,4 +1,4 @@
-= introduction
+# introduction
 this program is used to drive a DSP like ADAU1452 from Analog Device Sigmastudio GUI FOR RAPID DEVELOPMENT.
 
 it's based on sample code from:
@@ -6,18 +6,18 @@ it's based on sample code from:
 
 i've used sigma studio 3.14.1 on an ADAU1452 board
 
-= usage
+# usage
 
 it's pretty simple.
 
-# clone the repo: git clone 
-# make for cross compiling the source in a single bin **sigma_tcp**
-## eventually adjust the __BASEDIR__ var in Makefile to match your local environment
-# copy the binary in your SBC root fs
-# execute as __ ./sigma_tcp i2c /dev/i2c-1 0x3b __
-# hget to Sigma Studio, cfg the prj to lookup for IP connection
-# open connection
-# link compile download youre DSP design into the DSP
+* clone the repo: git clone 
+* make for cross compiling the source in a single bin **sigma_tcp**
+** eventually adjust the __BASEDIR__ var in Makefile to match your local environment
+* copy the binary in your SBC root fs
+* execute as __ ./sigma_tcp i2c /dev/i2c-1 0x3b __
+* hget to Sigma Studio, cfg the prj to lookup for IP connection
+* open connection
+* link compile download youre DSP design into the DSP
 
 example of this invocation:
 
@@ -35,7 +35,7 @@ example of this invocation:
  IP addresses:
  eth0: 192.168.0.103
 
-= test i2c connection
+# test i2c connection
 how to connect the board to the Arm SBC is out of scope, here, but you can check it works with a simple test:
  # i2cdetect  -y 1
       0  1  2  3  4  5  6  7  8  9  a  b  c  d  e  f
@@ -49,7 +49,7 @@ how to connect the board to the Arm SBC is out of scope, here, but you can check
  70: -- -- -- -- -- -- -- --   
 
 usually the DSP has i2c address __0x3b__
-= devel board
+# devel board
 i've been using a pretty cheap board from aliexpress:
   https://www.aliexpress.com/item/ADAU1452-DSP-development-board-learning-board/32814063707.html
 
