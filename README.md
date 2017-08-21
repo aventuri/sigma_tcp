@@ -29,37 +29,47 @@ it's pretty simple.
 
 example of this invocation:
 
- # ./sigma_tcp i2c /dev/i2c-1 0x3b
- Utility for driving ADAU1452 over IP/I2C using SigmaStudio
- License GPL v3 or later
- Andrea Venturi <be17068@iperbole.bo.it>
- 
- current development at https://github.com/aventuri/sigma_tcp
- inspired by https://wiki.analog.com/resources/tools-software/linux-software/sigmatcp
- 
- Using i2c backend
- i2c: Initalized for device /dev/i2c-1-3b
- Waiting for connections on port 8086...
- IP addresses:
- eth0: 192.168.0.103
+> # ./sigma_tcp i2c /dev/i2c-1 0x3b
+> Utility for driving ADAU1452 over IP/I2C using SigmaStudio
+> License GPL v3 or later
+> Andrea Venturi <be17068@iperbole.bo.it>
+> 
+> current development at https://github.com/aventuri/sigma_tcp
+> inspired by https://wiki.analog.com/resources/tools-software/linux-software/sigmatcp
+> 
+> Using i2c backend
+> i2c: Initalized for device /dev/i2c-1-3b
+> Waiting for connections on port 8086...
+> IP addresses:
+> eth0: 192.168.0.103
 
 # test i2c connection
 how to connect the board to the Arm SBC is out of scope, here, but you can check it works with a simple test:
- # i2cdetect  -y 1
-      0  1  2  3  4  5  6  7  8  9  a  b  c  d  e  f
- 00:          -- -- -- -- -- -- -- -- -- -- -- -- -- 
- 10: -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- 
- 20: -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- 
- 30: -- -- -- -- -- -- -- -- -- -- -- 3b -- -- -- -- 
- 40: -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- 
- 50: -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- 
- 60: -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- 
- 70: -- -- -- -- -- -- -- --   
+> # i2cdetect  -y 1
+>      0  1  2  3  4  5  6  7  8  9  a  b  c  d  e  f
+> 00:          -- -- -- -- -- -- -- -- -- -- -- -- -- 
+> 10: -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- 
+> 20: -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- 
+> 30: -- -- -- -- -- -- -- -- -- -- -- 3b -- -- -- -- 
+> 40: -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- 
+> 50: -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- 
+> 60: -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- 
+> 70: -- -- -- -- -- -- -- --   
 
 usually the DSP has i2c address __0x3b__
 # devel board
 i've been using a pretty cheap board from aliexpress:
   https://www.aliexpress.com/item/ADAU1452-DSP-development-board-learning-board/32814063707.html
+of course i've no economic interest with this vendor. it's just that's a pretty cheap board for testing such a powerful DSP
+
+# community
+i gladly invite everybody to test this setup and eventually give me feedback, here in gihub or at this forum thread:
+ http://www.diyaudio.com/forums/digital-line-level/309680-low-cost-adau1452-china-board.html
+i'm course open to hear about custom development, as i have made some pretty experience om this stuff!
+# next to come
+of course this is just a start.
+i plan surely to test if it works ok with another DSP, the ADAU1701 workhorse, as i have another pretty cheap devel board
+ https://kamami.pl/analog-devices/233761-audiodsp-zestaw-z-procesorem-dsp-sigmadsp-adau1701.html
 
  
   
