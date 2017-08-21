@@ -45,6 +45,7 @@ example of this invocation:
 
 # test i2c connection
 how to connect the board to the Arm SBC is out of scope, here, but you can check it works with a simple test:
+
      # i2cdetect  -y 1
           0  1  2  3  4  5  6  7  8  9  a  b  c  d  e  f
      00:          -- -- -- -- -- -- -- -- -- -- -- -- -- 
