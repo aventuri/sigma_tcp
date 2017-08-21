@@ -1,16 +1,20 @@
 # introduction
-this program is used to drive a DSP like ADAU1452 from Analog Device Sigmastudio GUI FOR RAPID DEVELOPMENT.
+this program is used to drive a DSP like [ADAU1452](http://www.analog.com/en/products/audio-video/audio-signal-processors/sigmadsp-audio-processors/adau1452.html) from [Analog Device Sigmastudio](http://www.analog.com/en/design-center/processors-and-dsp/evaluation-and-development-software/ss_sigst_02.html) GUI; that's useful for rapid development.
 
-it's based on sample code from:
+the program is supposed to run on a target board with an I2C bus connected to the DSP board
+
+in our use case, we have tested on a Cubieboard Allwinner A10 SOC running kernel 4.11.xx with buildroot OS
+
+this src is loosely based on sample code from:
   https://wiki.analog.com/resources/tools-software/linux-software/sigmatcp
 
-i've used sigma studio 3.14.1 on an ADAU1452 board
+i've used __Sigma Studio 3.14.1 Build 1675__ on windows 7 toward an ADAU1452 board
 
 # usage
 
 it's pretty simple.
 
-* clone the repo: git clone 
+* clone the repo: __git clone https://github.com/aventuri/sigma_tcp.git__
 * make for cross compiling the source in a single bin **sigma_tcp**
 ** eventually adjust the __BASEDIR__ var in Makefile to match your local environment
 * copy the binary in your SBC root fs
