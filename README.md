@@ -1,9 +1,11 @@
 # introduction
 this program is used to drive a DSP like [ADAU1452](http://www.analog.com/en/products/audio-video/audio-signal-processors/sigmadsp-audio-processors/adau1452.html) from [Analog Device Sigmastudio](http://www.analog.com/en/design-center/processors-and-dsp/evaluation-and-development-software/ss_sigst_02.html) GUI; that's useful for rapid development.
 
-the program is supposed to run on a target board with an I2C bus connected to the DSP board
+this program is supposed to run on a middleman board with these links:
+* an IP connection toward the PC running Sigma Studio
+* an I2C bus connected to the DSP board
 
-in our use case, we have tested on a Cubieboard Allwinner A10 SOC running kernel 4.11.xx with buildroot OS
+in my use case, we have running it on a Cubieboard with ARM32 Allwinner A10 SOC running kernel 4.11.xx with buildroot OS (a topic out of scope here..)
 
 this src is loosely based on sample code from:
   https://wiki.analog.com/resources/tools-software/linux-software/sigmatcp
@@ -19,7 +21,7 @@ you can have a look at my setup and running test here:
 it's pretty simple.
 
 * clone the repo: __git clone https://github.com/aventuri/sigma_tcp.git__
-* make for cross compiling the source in a single bin **sigma_tcp**
+* cross compile the source in the final single bin **sigma_tcp**
   * eventually adjust the __BASEDIR__ var in Makefile to match your local environment
 * copy the binary in your SBC root fs
 * execute as __./sigma_tcp i2c /dev/i2c-1 0x3b__, some verbose print tells you about IP and port
