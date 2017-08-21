@@ -1,2 +1,4 @@
 sigma_tcp
 tags
+*.swp
+.gdb*
