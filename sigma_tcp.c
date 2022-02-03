@@ -194,9 +194,12 @@ static void handle_connection(int fd)
 		switch (state) {
 			case FSM_IDLE:
 				ret = read(fd, p, MAX_BUF_SIZE - count);
-				if (ret <= 0)
+				if(ret < 0) {
+					state = FSM_STOP;
 					break;
-				else {
+				}else if (ret == 0){
+					break;
+				} else {
 					count += ret;
 					state = FSM_GOTCHAR;
 				}
